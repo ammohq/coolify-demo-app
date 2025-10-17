@@ -84,16 +84,50 @@ docker-compose down -v
 
 ## Deploy to Coolify
 
-This application is designed to be deployed to Coolify using Docker Compose:
+This application is production-ready for Coolify deployment:
 
-1. Push to a Git repository
-2. In Coolify, create a new service from Docker Compose
-3. Point to this repository
-4. Coolify will automatically deploy all services
+### Automatic Deployment
+
+1. **Fork or clone this repository**
+2. **In Coolify UI**:
+   - Create new Application → Public Git Repository
+   - Repository: `https://github.com/ammohq/coolify-demo-app.git`
+   - Branch: `main`
+   - Build Pack: `dockercompose`
+   - Add domain (e.g., `demo.yourdomain.com`)
+   - Click "Deploy"
+
+3. **Via Coolify MCP** (programmatic):
+   ```python
+   # Using the Coolify MCP server
+   create_application_public_git(
+       name="coolify-demo-app",
+       git_repository="https://github.com/ammohq/coolify-demo-app.git",
+       git_branch="main",
+       build_pack="dockercompose",
+       instant_deploy=True
+   )
+   ```
+
+### Coolify-Specific Configuration
+
+The `docker-compose.yaml` file is optimized for Coolify:
+
+- ✅ No custom networks (Coolify manages networking)
+- ✅ No port mappings (Traefik handles routing)
+- ✅ Backend has `traefik.enable=false` (internal only)
+- ✅ Only nginx is publicly exposed
+- ✅ Health checks configured for all services
+
+### Important Notes
+
+- **Backend is internal**: The FastAPI backend is NOT exposed to the internet. Only nginx handles external traffic and proxies to the backend.
+- **SSL/TLS**: Coolify + Traefik automatically handles HTTPS certificates
+- **Domain required**: You must configure a domain in Coolify for the application to be accessible
 
 ## Environment Variables
 
-All environment variables are pre-configured in `docker-compose.yml`:
+All environment variables are pre-configured in `docker-compose.yaml`:
 
 - `POSTGRES_DB=demo`
 - `POSTGRES_USER=demo`
