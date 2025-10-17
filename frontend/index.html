@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coolify Demo App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 16px;
+            font-size: 1.5em;
+        }
+
+        .status {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .badge {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .badge.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .messages-list {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 16px;
+        }
+
+        .message-item {
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .message-item .content {
+            font-size: 1.1em;
+            margin-bottom: 4px;
+        }
+
+        .message-item .meta {
+            font-size: 0.85em;
+            color: #6c757d;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .stat-box {
+            background: #f8f9fa;
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-box .value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-box .label {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-top: 4px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Coolify Demo App</h1>
+            <p>FastAPI + PostgreSQL + Redis + Nginx</p>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h2>📊 System Health</h2>
+                <div id="health-status" class="loading">
+                    <div class="spinner"></div> Checking...
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>📈 Statistics</h2>
+                <div id="stats-display" class="loading">
+                    <div class="spinner"></div> Loading...
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>💬 Messages</h2>
+            <div class="input-group">
+                <input type="text" id="message-input" placeholder="Type a message...">
+                <button id="send-btn" onclick="sendMessage()">Send</button>
+            </div>
+            <div id="messages-list" class="messages-list"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '/api';
+
+        async function checkHealth() {
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                const data = await response.json();
+
+                const statusHTML = `
+                    <p><strong>Status:</strong> ${data.status}</p>
+                    <div class="status">
+                        <span class="badge ${data.redis === 'connected' ? 'success' : 'error'}">
+                            Redis: ${data.redis}
+                        </span>
+                        <span class="badge ${data.postgres === 'connected' ? 'success' : 'error'}">
+                            PostgreSQL: ${data.postgres}
+                        </span>
+                    </div>
+                    <p style="margin-top: 12px; font-size: 0.9em; color: #6c757d;">
+                        Last checked: ${new Date(data.timestamp).toLocaleTimeString()}
+                    </p>
+                `;
+
+                document.getElementById('health-status').innerHTML = statusHTML;
+            } catch (error) {
+                document.getElementById('health-status').innerHTML = `
+                    <span class="badge error">Error: ${error.message}</span>
+                `;
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_URL}/stats`);
+                const data = await response.json();
+
+                const statsHTML = `
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <div class="value">${data.redis_count}</div>
+                            <div class="label">Redis Count</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="value">${data.postgres_count}</div>
+                            <div class="label">PostgreSQL Count</div>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('stats-display').innerHTML = statsHTML;
+            } catch (error) {
+                document.getElementById('stats-display').innerHTML = `
+                    <span class="badge error">Error: ${error.message}</span>
+                `;
+            }
+        }
+
+        async function loadMessages() {
+            try {
+                const response = await fetch(`${API_URL}/messages`);
+                const data = await response.json();
+
+                if (data.messages.length === 0) {
+                    document.getElementById('messages-list').innerHTML = `
+                        <p class="loading">No messages yet. Send the first one!</p>
+                    `;
+                    return;
+                }
+
+                const messagesHTML = data.messages.map(msg => `
+                    <div class="message-item">
+                        <div class="content">${escapeHtml(msg.content)}</div>
+                        <div class="meta">
+                            #${msg.id} • ${new Date(msg.created_at).toLocaleString()}
+                        </div>
+                    </div>
+                `).join('');
+
+                document.getElementById('messages-list').innerHTML = messagesHTML;
+            } catch (error) {
+                document.getElementById('messages-list').innerHTML = `
+                    <span class="badge error">Error loading messages: ${error.message}</span>
+                `;
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('message-input');
+            const content = input.value.trim();
+
+            if (!content) return;
+
+            const btn = document.getElementById('send-btn');
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+
+            try {
+                const response = await fetch(`${API_URL}/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ content })
+                });
+
+                if (response.ok) {
+                    input.value = '';
+                    await loadMessages();
+                    await loadStats();
+                } else {
+                    alert('Failed to send message');
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Send';
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        document.getElementById('message-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        checkHealth();
+        loadStats();
+        loadMessages();
+
+        setInterval(() => {
+            checkHealth();
+            loadStats();
+        }, 10000);
+
+        setInterval(loadMessages, 5000);
+    </script>
+</body>
+</html>
