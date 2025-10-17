@@ -45,7 +45,7 @@ services:
       retries: 3
     labels:
       - "coolify.managed=true"
-      - "coolify.exclude=true"
+      - "traefik.enable=false"
 
   nginx:
     build: ./nginx
