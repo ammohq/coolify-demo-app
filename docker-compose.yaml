@@ -49,6 +49,8 @@ services:
 
   nginx:
     build: ./nginx
+    expose:
+      - "80"
     depends_on:
       - backend
     healthcheck:
